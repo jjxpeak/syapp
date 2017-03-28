@@ -13,15 +13,16 @@ class server
 {
     public static $_server;
     private $app;
-    private $serveIp = '0.0.0.0';
-    private $servePort = '80';
+    private $serverip = '0.0.0.0';
+    private $serverport = '80';
     private $serveConfigArr = array();
+    private $serverObj;
 
-    private function __construct($appIni, $serveIni)
+    private function __construct($appIni, $serveIni = null)
     {
-        if (!is_file($appIni) && pathinfo($appIni, 4)){
+        if (!is_file($appIni) && pathinfo($appIni, 4) == 'ini'){
             //TODO:配置文件不存在的话返回错误和1001;
-            throw new \Yaf_Exception_LoadFailed('配置文件路径错误:'.$appIni, 1001);
+            throw new \Yaf_Exception_LoadFailed('app配置文件错误:'.$appIni, 1001);
         }
         if (is_file($serveIni)){
             switch (pathinfo($serveIni,4)){
@@ -29,19 +30,68 @@ class server
                     $this->serveConfigArr = parse_ini_file($serveIni, true);
                     break;
                 case 'php':
+                    $this->serveConfigArr = include($serveIni);
                     break;
                 default:
                     throw new Yaf_Exception('server配置文件加载错误');
             }
         }else{
+            $ConfigArr = parse_ini_file($appIni, true);
+            if(isset($ConfigArr['server']))
+                $this->serveConfigArr = $ConfigArr['server'];
+            else
+                throw new Yaf_Exception('配置文件错误');
+        }
+        try {
+            $this->parseConfig($this->serveConfigArr);
+            $this->runApp();
+        }catch (Yaf_Exception $exception){
 
         }
-        var_dump($this->serveConfigArr);
+//        var_dump($this->serverip);
     }
 
+    /**
+     * 解析配置文件，过滤不需要的配置项
+     * @param array $pares
+     * @return bool
+     */
+    private function parseConfig(array $pares){
+        foreach ($pares as $k => $v){
+            $this->$k = $v;
+        }
+        return true;
+    }
+
+
+    private function runApp(){
+        $this->serverObj = new swoole_http_server( $this->serverip, $this->serverport );
+//        $this->serverObj->set($this->serverConfig['swoole']);
+        $this->serverObj->on('Start', array($this, 'onStart'));
+        $this->serverObj->on('ManagerStart', array($this, 'onManagerStart'));
+        $this->serverObj->on('WorkerStart', array($this, 'onWorkerStart'));
+        $this->serverObj->on('WorkerStop', array($this, 'onWorkerStop'));
+        $this->serverObj->on('request', array($this, 'onRequest'));
+        $this->serverObj->start();
+    }
+
+    private function onStart(){
+        echo __FUNCTION__;
+    }
+    private function onManagerStart(){
+        echo __FUNCTION__;
+    }
+    private function onWorkerStart(){
+        echo __FUNCTION__;
+    }
+    private function onWorkerStop(){
+        echo __FUNCTION__;
+    }
+    private function onRequest(swoole_http_request $request, swoole_http_response $response){
+        $response -> end('123');
+    }
     public function __call($name, $arguments)
     {
-        // TODO: Implement __call() method.
     }
 
     private function __clone()
@@ -66,12 +116,10 @@ class server
 
     public function __set($name, $value)
     {
-        // TODO: Implement __set() method.
     }
 
     public function __get($name)
     {
-        // TODO: Implement __get() method.
     }
 
 
