@@ -12,7 +12,7 @@
 class server
 {
     public static $_server;
-    private $app;
+    private $appObjg;
     private $serverip = '0.0.0.0';
     private $serverport = '80';
     private $serveConfigArr = array();
