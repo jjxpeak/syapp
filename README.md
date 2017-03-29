@@ -27,13 +27,13 @@
             1. 推送本地仓库 git push -u origin master 推送master所有内容
             1. git push origin master 推送最新改动
         - 克隆远程仓库 git clone \<url>
-        
-            
     1. 分支
         - 查看分支 git branch
         - 创建分支 git branch \<name>
         - 切换分支 git checkout \<name>
         - 创建+切换分支 git checkout -b \<name>
         - 合并某一分支到当前分支 git merge <name>
-        - 删除分支 git branch -d \<name>
+        - 删除分支 git branch -d \<name> 
+            
+  
         
