@@ -21,15 +21,15 @@
         - 删除版本中文件
             1. git rm
             2. git commit
-    1. 远程仓库
+    2. 远程仓库
         - 关联远程仓库
             1. 生成公钥 ssh-keygen -t rsa -C "email"
-            1. 将生成的公钥配置到远程仓库中
-            1. 用 git remote add origin git@servername:仓库用户名/rep-name.git
-            1. 推送本地仓库 git push -u origin master 推送master所有内容
-            1. git push origin master 推送最新改动
+            2. 将生成的公钥配置到远程仓库中
+            3. 用 git remote add origin git@servername:仓库用户名/rep-name.git
+            4. 推送本地仓库 git push -u origin master 推送master所有内容
+            5. git push origin master 推送最新改动
         - 克隆远程仓库 git clone \<url>
-    1. 分支
+    3. 分支
         - 查看分支 git branch
         - 创建分支 git branch \<name>
         - 切换分支 git checkout \<name>
