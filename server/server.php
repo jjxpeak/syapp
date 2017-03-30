@@ -18,7 +18,7 @@ class server
     private $serverport = '80';
     private $serverConfigArr = array();
     private $serverObj;
-    private $serverHeader;
+//    private $serverHeader;
 
     private function __construct($appIni, $serveIni = null)
     {
@@ -46,12 +46,12 @@ class server
             else
                 throw new Yaf_Exception('配置文件错误');
         }
+        if (!$this->serverConfigArr){ throw new Yaf_Exception('server配置解析失败');}
         try {
-            if ($this->serverConfigArr) throw new Yaf_Exception('server配置解析失败');
             $this->parseConfig($this->serverConfigArr);
             $this->runApp();
         }catch (Yaf_Exception $exception){
-
+            echo $exception->getMessage();
         }
 
         return;
@@ -77,13 +77,11 @@ class server
         $this->serverObj->on('WorkerStart', array($this, 'onWorkerStart'));
         $this->serverObj->on('WorkerStop', array($this, 'onWorkerStop'));
         $this->serverObj->on('request', array($this, 'onRequest'));
-        $this->serverObj->on('close', array($this, 'onClose'));
         $this->serverObj->start();
     }
 
     private function onStart(swoole_http_server $server){
        $server -> swoole_set_process_name($this->serverConfigArr['server']['appname']);
-
         return;
     }
     private function onWorkerStart(swoole_http_server $server, int $worker_id){
@@ -96,8 +94,6 @@ class server
         }
 
         $this->appObjg = new Yaf_Application($this->appIni);
-
-        echo $worker_id;
         return;
     }
     private function onWorkerStop(swoole_http_server $server, int $worker_id){
@@ -111,16 +107,21 @@ class server
         Yaf_Registry::set('SWOOLE_HTTP_REQUEST', $request);
         Yaf_Registry::set('SWOOLE_HTTP_RESPONSE', $response);
         Yaf_Registry::set('SWOOLE_HTTP_SERVER', $this->serverObj);
+        $response -> end('测试');
+
+        echo swoole_strerror(swoole_errno());
         ob_start();
         try{
             $yafHttp = new Yaf_Request_Http($request->server['request_uri']);
             $this->appObjg->bootstrap()->getDispatcher()->disPatcher($yafHttp);
         }catch (Yaf_Exception $e){
-
+            echo $e ->getMessage();
         }
         $result = ob_get_contents();
-        $response -> end($result);
+        echo $result;
+
         ob_clean();
+
         return true;
     }
 
