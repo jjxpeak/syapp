@@ -73,21 +73,29 @@ class server
     private function runApp(){
         $this->serverObj = new swoole_http_server( $this->serverip, $this->serverport );
         $this->serverObj->set($this->serverConfigArr);
-        $this->serverObj->on('Start', array($this, 'onStart'));
-        $this->serverObj->on('WorkerStart', array($this, 'onWorkerStart'));
-        $this->serverObj->on('WorkerStop', array($this, 'onWorkerStop'));
-        $this->serverObj->on('request', array($this, 'onRequest'));
+        $this->serverObj->on('Start', function (){
+            $this->onStart($this->serverObj);
+        });
+        $this->serverObj->on('WorkerStart', function (){
+            $this->onWorkerStart();
+        });
+        $this->serverObj->on('WorkerStop', function (){
+            $this->onWorkerStop($this->serverObj,$this->serverObj->worker_id);
+        });
+        $this->serverObj->on('request', function($request,$response){
+            $this->onRequest($request,$response);
+        });
         $this->serverObj->start();
     }
 
-    private function onStart(swoole_http_server $server){
-       $server -> swoole_set_process_name($this->serverConfigArr['server']['appname']);
+    private function onStart(){
+       swoole_set_process_name($this->serverConfigArr['server']['appname']);
         return;
     }
-    private function onWorkerStart(swoole_http_server $server, int $worker_id){
+    private function onWorkerStart(){
         global $argv;
 
-        if ($worker_id >= $server->setting['worker_num']){
+        if ($this->serverObj->worker_id >= $this->serverObj->setting['server']['worker_num']){
             swoole_set_process_name('php ' .$argv[0]. 'task worker');
         }else {
             swoole_set_process_name('php ' .$argv[0]. 'event worker');
@@ -102,25 +110,31 @@ class server
 
 
     private function onRequest(swoole_http_request $request, swoole_http_response $response){
-
         $this->initRequestParams($request);
         Yaf_Registry::set('SWOOLE_HTTP_REQUEST', $request);
         Yaf_Registry::set('SWOOLE_HTTP_RESPONSE', $response);
         Yaf_Registry::set('SWOOLE_HTTP_SERVER', $this->serverObj);
-        $response -> end('测试');
+        $a = 1;
+        echo $a;
+        $a++;
 
-        echo swoole_strerror(swoole_errno());
-        ob_start();
-        try{
-            $yafHttp = new Yaf_Request_Http($request->server['request_uri']);
-            $this->appObjg->bootstrap()->getDispatcher()->disPatcher($yafHttp);
-        }catch (Yaf_Exception $e){
-            echo $e ->getMessage();
-        }
-        $result = ob_get_contents();
-        echo $result;
+        $response ->header('Content-type','text/html');
+        $response ->header('charset','utf-8');
+//        $response -> write('测试');
+        $response ->end('测试');
 
-        ob_clean();
+//        echo swoole_strerror(swoole_errno());
+//        ob_start();
+//        try{
+//            $yafHttp = new Yaf_Request_Http($request->server['request_uri']);
+//            $this->appObjg->bootstrap()->getDispatcher()->disPatcher($yafHttp);
+//        }catch (Yaf_Exception $e){
+//            echo $e ->getMessage();
+//        }
+//        $result = ob_get_contents();
+//        echo $result;
+//
+//        ob_clean();
 
         return true;
     }
@@ -132,14 +146,14 @@ class server
      */
     private function initRequestParams(swoole_http_request $request){
 
-        Yaf_Registry::set('SY_SERVER', $request->server ? $request->server : array());
-        Yaf_Registry::set('SY_HEADER', $request->header ? $request->header : array());
-        Yaf_Registry::set('SY_GET', $request->get ? $request->get : array());
-        Yaf_Registry::set('SY_POST', $request->post ? $request->post : array());
-        Yaf_Registry::set('SY_COOKIE', $request->cookie ? $request->cookie : array());
-        Yaf_Registry::set('SY_FILES', $request->files ? $request->files : array());
+        Yaf_Registry::set('SY_SERVER', isset($request->server) ? $request->server : array());
+        Yaf_Registry::set('SY_HEADER', isset($request->header) ? $request->header : array());
+        Yaf_Registry::set('SY_GET', isset($request->get) ? $request->get : array());
+        Yaf_Registry::set('SY_POST', isset($request->post) ? $request->post : array());
+        Yaf_Registry::set('SY_COOKIE', isset($request->cookie) ? $request->cookie : array());
+        Yaf_Registry::set('SY_FILES', isset($request->files) ? $request->files : array());
         //获取php://input数据并解析为数组
-        Yaf_Registry::set('SY_INPUT', $request->rawContent() ? parse_str($request->rawContent()) : array());
+        Yaf_Registry::set('SY_INPUT', !empty($request->rawContent()) ? parse_str($request->rawContent()) : array());
 
         return true;
     }
