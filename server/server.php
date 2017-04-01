@@ -19,6 +19,8 @@ class server
     private $serverConfigArr = array();
     private $serverObj;
 //    private $serverHeader;
+    private $taskId;
+    private $workerId;
 
     private function __construct($appIni, $serveIni = null)
     {
@@ -85,11 +87,22 @@ class server
         $this->serverObj->on('request', function($request,$response){
             $this->onRequest($request,$response);
         });
+        $this->serverObj->on('WorkerError', function(swoole_server $serv, int $worker_id, int $worker_pid, int $exit_code, int $signal){
+            $errStr = "WorkerError触发: \n\t";
+            $errStr .= 'worker_id: '.$worker_id."\n\t";
+            $errStr .= 'worker_pid: '.$worker_pid."\n\t";
+            $errStr .= 'exit_code: '.$exit_code."\n\t";
+            $errStr .= 'signal: '.$signal."\n\t";
+            echo $errStr;
+        });
         $this->serverObj->start();
     }
 
     private function onStart(){
-       swoole_set_process_name($this->serverConfigArr['server']['appname']);
+        if (function_exists('cli_set_process_title'))
+            cli_set_process_title($this->serverConfigArr['server']['appname']);
+        else
+            swoole_set_process_name($this->serverConfigArr['server']['appname']);
         return;
     }
     private function onWorkerStart(){
@@ -100,8 +113,10 @@ class server
         }else {
             swoole_set_process_name('php ' .$argv[0]. 'event worker');
         }
-
         $this->appObjg = new Yaf_Application($this->appIni);
+        ob_start();
+        $this->appObjg->bootstrap()->run();
+        ob_end_clean();
         return;
     }
     private function onWorkerStop(swoole_http_server $server, int $worker_id){
@@ -114,27 +129,19 @@ class server
         Yaf_Registry::set('SWOOLE_HTTP_REQUEST', $request);
         Yaf_Registry::set('SWOOLE_HTTP_RESPONSE', $response);
         Yaf_Registry::set('SWOOLE_HTTP_SERVER', $this->serverObj);
-        $a = 1;
-        echo $a;
-        $a++;
+        $response->header('Content-type','text/html');
+        $response->header('charset','utf-8');
+        $response->gzip();
+        $yafHttp = new Yaf_Request_Http($request->server['request_uri']);
+        ob_start();
+        try{
+            $this->appObjg->getDispatcher()->dispatch($yafHttp);
+        }catch (Yaf_Exception $e){
+            echo $e ->getMessage();
+        }
+        $result = ob_get_clean();
+        $response->end($result);
 
-        $response ->header('Content-type','text/html');
-        $response ->header('charset','utf-8');
-//        $response -> write('测试');
-        $response ->end('测试');
-
-//        echo swoole_strerror(swoole_errno());
-//        ob_start();
-//        try{
-//            $yafHttp = new Yaf_Request_Http($request->server['request_uri']);
-//            $this->appObjg->bootstrap()->getDispatcher()->disPatcher($yafHttp);
-//        }catch (Yaf_Exception $e){
-//            echo $e ->getMessage();
-//        }
-//        $result = ob_get_contents();
-//        echo $result;
-//
-//        ob_clean();
 
         return true;
     }
@@ -157,6 +164,8 @@ class server
 
         return true;
     }
+
+
     public function __call($name, $arguments)
     {
     }
@@ -180,6 +189,7 @@ class server
             return self::$_server;
         }
     }
+
 
     public function __set($name, $value)
     {
