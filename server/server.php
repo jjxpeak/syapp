@@ -50,7 +50,7 @@ class server
         }
         if (!$this->serverConfigArr){ throw new Yaf_Exception('server配置解析失败');}
         try {
-            $this->parseConfig($this->serverConfigArr);
+            $this->parseConfig($this->serverConfigArr['server']);
             $this->runApp();
         }catch (Yaf_Exception $exception){
             echo $exception->getMessage();
